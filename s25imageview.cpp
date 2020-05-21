@@ -11,12 +11,14 @@ static const char *vertShader =
     "#version 330\n"
     "layout(location = 0) in"
     "          vec2  vert;\n"
+    "layout(location = 1) in"
+    "          vec2  uv_;\n"
     "out       vec2  uv;\n"
     "uniform   vec2  viewport;\n"
     "\n"
     "void main() {\n"
-    "  vec2 pos = vec2(vert.x / viewport.x, vert.y / viewport.y);"
-    "  uv = pos;\n"
+    "  vec2 pos = vec2(vert.x / viewport.x, - vert.y / viewport.y);"
+    "  uv = uv_;\n"
     "  gl_Position = vec4(pos, 0, 1);\n"
     "}";
 
@@ -29,6 +31,15 @@ static const char *fragShader =
     "void main() {\n"
     "  f_color = texture(u_image, uv);\n"
     "}";
+
+static float uvBuffer[] = {
+    0.0, 0.0,
+    1.0, 0.0,
+    0.0, 1.0,
+    0.0, 1.0,
+    1.0, 0.0,
+    1.0, 1.0,
+};
 
 S25ImageView::S25ImageView(QWidget *parent)
     :QOpenGLWidget(parent),
@@ -46,6 +57,8 @@ void S25ImageView::initializeGL() {
 
   f->glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   f->glClearDepthf(1.0f);
+
+  f->glEnable(GL_FRAMEBUFFER_SRGB);
 
   // create shader program
 
@@ -95,6 +108,10 @@ void S25ImageView::initializeGL() {
 
   m_vao.create();
   m_vao.bind();
+
+  f->glGenBuffers(1, &m_uvBuffer);
+  f->glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
+  f->glBufferData(GL_ARRAY_BUFFER, sizeof(uvBuffer), uvBuffer, GL_STATIC_DRAW);
 }
 
 void S25ImageView::paintGL() {
@@ -119,8 +136,23 @@ void S25ImageView::paintGL() {
   f->glUseProgram(m_program);
   f->glUniform2f(0, m_viewportWidth, m_viewportHeight);
 
+  f->glEnable(GL_BLEND);
+  f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  f->glEnableVertexAttribArray(0);
+  f->glEnableVertexAttribArray(1);
+
+  f->glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
+  f->glVertexAttribPointer(
+      1,
+      2,
+      GL_FLOAT,
+      GL_FALSE,
+      0,
+      (void*) 0);
+
   for (size_t i = 0; i < entries; i++) {
-    if (m_imageEntries[i] == -1) {
+    if (!m_images[i]) {
       continue;
     }
 
@@ -131,7 +163,6 @@ void S25ImageView::paintGL() {
 
     f->glBindTexture(GL_TEXTURE_2D, tex);
 
-    f->glEnableVertexAttribArray(0);
     f->glBindBuffer(GL_ARRAY_BUFFER, vtx);
     f->glVertexAttribPointer(
         0,
@@ -183,8 +214,10 @@ void S25ImageView::loadArchive(QString const& path) {
            << ", with " << arc.getTotalEntries()
            << "entries";
 
-  m_imageEntries.resize(arc.getTotalLayers(), -1);
-  m_imageEntries[0] = 0;
+  m_imageEntries.resize(arc.getTotalLayers(), 1);
+  if (arc.getTotalEntries() == 1) {
+    m_imageEntries[0] = 0;
+  }
 
   m_archive = std::make_optional(std::move(arc));
 }
@@ -197,6 +230,8 @@ void S25ImageView::loadVertexBuffers() {
     return;
   }
 
+  qDebug() << "load vertex buffers";
+
   auto &archive = *m_archive;
   auto entries = archive.getTotalLayers();
 
@@ -206,14 +241,39 @@ void S25ImageView::loadVertexBuffers() {
   m_vertexBuffers.resize(entries, 0);
   f->glGenBuffers(entries, m_vertexBuffers.data());
 
+  float max_width = 0;
+  float max_height = 0;
+
   for (size_t i = 0; i < entries; i++) {
+    if (!m_images[i]) {
+      continue;
+    }
+
+    const auto &img = *m_images[i];
+
+    max_width = fmax(img.getWidth(), max_width);
+    max_height = fmax(img.getHeight(), max_height);
+  }
+
+  for (size_t i = 0; i < entries; i++) {
+    if (!m_images[i]) {
+      continue;
+    }
+
+    const auto &img = *m_images[i];
+
+    auto x1 = (float) img.getOffsetX() - max_width * 0.5f;
+    auto y1 = (float) img.getOffsetY() - max_height * 0.5f;
+    auto x2 = x1 + (float) img.getWidth();
+    auto y2 = y1 + (float) img.getHeight();
+
     float buf[] = {
-      0.0, 0.0,
-      1.0, 0.0,
-      0.0, 1.0,
-      0.0, 1.0,
-      1.0, 0.0,
-      1.0, 1.0,
+        x1, y1,
+        x2, y1,
+        x1, y2,
+        x1, y2,
+        x2, y1,
+        x2, y2,
     };
 
     f->glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffers[i]);

@@ -34,6 +34,8 @@ private:
   std::vector<GLuint> m_textures;
   std::vector<GLuint> m_vertexBuffers;
 
+  GLuint m_uvBuffer;
+
   QOpenGLVertexArrayObject m_vao;
   GLuint m_program;
 

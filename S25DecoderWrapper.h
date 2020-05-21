@@ -106,9 +106,9 @@ public:
 
   std::optional<S25pImage> getImage(size_t entry) {
     auto img = S25ArchiveLoadImage(m_inner, entry);
-    auto img_wrapper = S25pImage(img);
 
     if (img) {
+      auto img_wrapper = S25pImage(img);
       return std::make_optional(S25pImage(std::move(img_wrapper)));
     } else {
       return std::nullopt;
