@@ -44,8 +44,17 @@
         <height>16777215</height>
        </size>
       </property>
+      <property name="acceptDrops">
+       <bool>true</bool>
+      </property>
      </widget>
      <widget class="QListView" name="listView">
+      <property name="minimumSize">
+       <size>
+        <width>100</width>
+        <height>0</height>
+       </size>
+      </property>
       <property name="maximumSize">
        <size>
         <width>300</width>

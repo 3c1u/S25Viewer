@@ -8,7 +8,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
@@ -34,6 +34,8 @@ if(ANDROID)
     widget.cpp
     widget.h
     widget.ui
+    s25decoder/S25Decoder.h
+    S25DecoderWrapper.h
   )
 else()
   add_executable(S25Viewer
@@ -43,7 +45,16 @@ else()
     widget.cpp
     widget.h
     widget.ui
+    s25decoder/S25Decoder.h
+    S25DecoderWrapper.h
   )
 endif()
 
+execute_process(COMMAND cd ${CMAKE_SOURCE_DIR}/s25decoder)
+execute_process(COMMAND cargo build --release)
+execute_process(COMMAND cd ${CMAKE_BINARY_DIR})
+
+target_link_directories(S25Viewer PRIVATE ${CMAKE_SOURCE_DIR}/s25decoder/target/release)
+
 target_link_libraries(S25Viewer PRIVATE Qt5::Widgets)
+target_link_libraries(S25Viewer PRIVATE s25decoder)
