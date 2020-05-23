@@ -5,26 +5,26 @@
 #include <optional>
 #include <vector>
 
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QOpenGLFunctions>
 #include <QOpenGLVertexArrayObject>
-#include <QOpenGLWidget>
 #include <QUrl>
-#include <QWidget>
 
 #include "S25DecoderWrapper.h"
 
-class S25ImageView : public QOpenGLWidget {
+class S25ImageRenderer : public QObject, protected QOpenGLFunctions {
   Q_OBJECT
 public:
-  S25ImageView(QWidget *parent);
+  S25ImageRenderer();
 
   // override functions
-  virtual void initializeGL() override;
-  virtual void paintGL() override;
-  virtual void resizeGL(int w, int h) override;
+  void initializeGL();
+  void paintGL();
+  void resizeGL(int w, int h);
 
-  // handle drop event
-  virtual void dropEvent(QDropEvent *theEvent) override;
-  virtual void dragEnterEvent(QDragEnterEvent *event) override;
+  // for S25Image
+  void loadImage(QUrl const &path);
 
   // for S25LayerModel
   int  getTotalLayers() const;
@@ -35,6 +35,7 @@ public:
 
 signals:
   void imageLoaded(QUrl theUrl);
+  void update();
 
 private:
   std::optional<S25pArchive>            m_archive;

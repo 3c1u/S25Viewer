@@ -3,7 +3,7 @@
 #include <QColor>
 #include <QDebug>
 
-S25LayerModel::S25LayerModel(QObject *parent, S25ImageView *view)
+S25LayerModel::S25LayerModel(QObject *parent, S25ImageRenderer *view)
     : QAbstractTableModel(parent), m_view{view} {}
 
 void S25LayerModel::updateModel() { emit layoutChanged(); }
@@ -14,7 +14,7 @@ int S25LayerModel::rowCount(const QModelIndex &parent) const {
   if (m_view) {
     return m_view->getTotalLayers();
   } else {
-    return 0;
+    return 3;
   }
 }
 
@@ -24,7 +24,7 @@ int S25LayerModel::columnCount(const QModelIndex &parent) const {
   return 2;
 }
 
-void S25LayerModel::bindView(S25ImageView *view) { m_view = view; }
+void S25LayerModel::bindView(S25ImageRenderer *view) { m_view = view; }
 
 Qt::ItemFlags S25LayerModel::flags(const QModelIndex &index) const {
   switch (index.column()) {

@@ -5,7 +5,7 @@
 #include <QOpenGLFunctions>
 
 #include "S25DecoderWrapper.h"
-#include "s25imageview.h"
+#include "S25ImageRenderer.h"
 
 static const char *vertShader =
     "#version 330\n"
@@ -35,11 +35,11 @@ static float uvBuffer[] = {
     0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0,
 };
 
-S25ImageView::S25ImageView(QWidget *parent)
-    : QOpenGLWidget(parent), m_archive{std::nullopt}, m_images{},
-      m_imageEntries{}, m_textures{}, m_viewportWidth{0}, m_viewportHeight{0} {}
+S25ImageRenderer::S25ImageRenderer()
+    : m_archive{std::nullopt}, m_images{}, m_imageEntries{}, m_textures{},
+      m_viewportWidth{0}, m_viewportHeight{0} {}
 
-int S25ImageView::getTotalLayers() const {
+int S25ImageRenderer::getTotalLayers() const {
   if (m_archive) {
     return m_archive->getTotalLayers();
   }
@@ -47,7 +47,7 @@ int S25ImageView::getTotalLayers() const {
   return 0;
 }
 
-int S25ImageView::getPictLayerFor(unsigned long layer) const {
+int S25ImageRenderer::getPictLayerFor(unsigned long layer) const {
   if (m_archive && layer < m_imageEntries.size()) {
     return m_imageEntries[layer];
   }
@@ -55,7 +55,7 @@ int S25ImageView::getPictLayerFor(unsigned long layer) const {
   return -1;
 }
 
-bool S25ImageView::getPictLayerIsValid(unsigned long layer) const {
+bool S25ImageRenderer::getPictLayerIsValid(unsigned long layer) const {
   if (m_archive && layer < m_images.size()) {
     return !!m_images[layer] || m_imageEntries[layer] == -1;
   }
@@ -63,18 +63,18 @@ bool S25ImageView::getPictLayerIsValid(unsigned long layer) const {
   return false;
 }
 
-void S25ImageView::setPictLayer(unsigned long layer, int pictLayer) {
+void S25ImageRenderer::setPictLayer(unsigned long layer, int pictLayer) {
   if (m_archive && layer < m_images.size()) {
     m_imageEntries[layer] = pictLayer;
 
     loadImagesToTexture();
     loadVertexBuffers();
 
-    update();
+    emit update();
   }
 }
 
-void S25ImageView::initializeGL() {
+void S25ImageRenderer::initializeGL() {
   auto f = QOpenGLContext::currentContext()->functions();
 
   f->glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -136,7 +136,7 @@ void S25ImageView::initializeGL() {
   f->glBufferData(GL_ARRAY_BUFFER, sizeof(uvBuffer), uvBuffer, GL_STATIC_DRAW);
 }
 
-void S25ImageView::paintGL() {
+void S25ImageRenderer::paintGL() {
   auto f = QOpenGLContext::currentContext()->functions();
 
   // clear
@@ -188,26 +188,16 @@ void S25ImageView::paintGL() {
   f->glFinish();
 }
 
-void S25ImageView::resizeGL(int width, int height) {
+void S25ImageRenderer::resizeGL(int width, int height) {
   m_viewportWidth  = width;
   m_viewportHeight = height;
 }
 
-void S25ImageView::dragEnterEvent(QDragEnterEvent *event) {
-  event->acceptProposedAction();
-}
-
-void S25ImageView::dropEvent(QDropEvent *theEvent) {
+void S25ImageRenderer::loadImage(QUrl const &theUrl) {
   qDebug() << "s25 drop event";
 
-  // load S25 image
-  if (!theEvent->mimeData()->hasUrls()) {
-    return;
-  }
-
-  const auto url = theEvent->mimeData()->urls().first();
-  if (loadArchive(url.path())) {
-    emit imageLoaded(url);
+  if (loadArchive(theUrl.path())) {
+    emit imageLoaded(theUrl);
   }
 
   // load S25 into texture
@@ -215,10 +205,10 @@ void S25ImageView::dropEvent(QDropEvent *theEvent) {
   loadVertexBuffers();
 
   // force update
-  update();
+  emit update();
 }
 
-bool S25ImageView::loadArchive(QString const &path) {
+bool S25ImageRenderer::loadArchive(QString const &path) {
   auto pathAsUtf8 = path.toUtf8();
   auto arc        = S25pArchive(pathAsUtf8);
 
@@ -239,7 +229,7 @@ bool S25ImageView::loadArchive(QString const &path) {
   return true;
 }
 
-void S25ImageView::loadVertexBuffers() {
+void S25ImageRenderer::loadVertexBuffers() {
   auto f = QOpenGLContext::currentContext()->functions();
 
   // guard empty S25 archive
@@ -303,7 +293,7 @@ void S25ImageView::loadVertexBuffers() {
   }
 }
 
-void S25ImageView::loadImagesToTexture() {
+void S25ImageRenderer::loadImagesToTexture() {
   auto f = QOpenGLContext::currentContext()->functions();
 
   // guard empty S25 archive
