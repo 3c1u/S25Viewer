@@ -206,21 +206,27 @@ void S25ImageView::dropEvent(QDropEvent *theEvent) {
   }
 
   const auto url = theEvent->mimeData()->urls().first();
-  this->loadArchive(url.path());
+  if (loadArchive(url.path())) {
+    emit imageLoaded(url);
+  }
 
   // load S25 into texture
   loadImagesToTexture();
   loadVertexBuffers();
 
-  emit imageLoaded();
-
   // force update
   update();
 }
 
-void S25ImageView::loadArchive(QString const &path) {
+bool S25ImageView::loadArchive(QString const &path) {
   auto pathAsUtf8 = path.toUtf8();
   auto arc        = S25pArchive(pathAsUtf8);
+
+  if (!arc) {
+    // archive load failed
+    qDebug() << "failed to load archive";
+    return false;
+  }
 
   qDebug() << "image loaded: " << path << ", with " << arc.getTotalEntries()
            << "entries";
@@ -229,6 +235,8 @@ void S25ImageView::loadArchive(QString const &path) {
   m_imageEntries.resize(arc.getTotalLayers(), -1);
 
   m_archive = std::make_optional(std::move(arc));
+
+  return true;
 }
 
 void S25ImageView::loadVertexBuffers() {

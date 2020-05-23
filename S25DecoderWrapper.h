@@ -70,6 +70,8 @@ public:
 
   S25pArchive(S25pArchive const &) = delete;
 
+  operator bool() const { return m_inner != nullptr; }
+
   S25pArchive(S25pArchive &&archive) {
     if (this == &archive) {
       return;

@@ -7,6 +7,7 @@
 
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
+#include <QUrl>
 #include <QWidget>
 
 #include "S25DecoderWrapper.h"
@@ -33,7 +34,7 @@ public:
   void setPictLayer(unsigned long layer, int pictLayer);
 
 signals:
-  void imageLoaded();
+  void imageLoaded(QUrl theUrl);
 
 private:
   std::optional<S25pArchive>            m_archive;
@@ -51,7 +52,7 @@ private:
   int m_viewportWidth;
   int m_viewportHeight;
 
-  void loadArchive(QString const &path);
+  bool loadArchive(QString const &path);
   void loadImagesToTexture();
   void loadVertexBuffers();
 };

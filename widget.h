@@ -16,6 +16,8 @@ class Widget : public QWidget {
 public:
   Widget(QWidget *parent = nullptr);
   ~Widget();
+public slots:
+  void imageLoaded(QUrl theUrl);
 
 private:
   Ui::Widget *ui;
