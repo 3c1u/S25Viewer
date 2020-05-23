@@ -1,11 +1,11 @@
-#include <QOpenGLFunctions>
-#include <QDropEvent>
-#include <QDrag>
-#include <QMimeData>
 #include <QDebug>
+#include <QDrag>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QOpenGLFunctions>
 
-#include "s25imageview.h"
 #include "S25DecoderWrapper.h"
+#include "s25imageview.h"
 
 static const char *vertShader =
     "#version 330\n"
@@ -22,34 +22,56 @@ static const char *vertShader =
     "  gl_Position = vec4(pos, 0, 1);\n"
     "}";
 
-static const char *fragShader =
-    "#version 330\n"
-    "uniform sampler2D u_image;"
-    "in      vec2      uv;"
-    "out     vec4      f_color;"
-    "\n"
-    "void main() {\n"
-    "  f_color = texture(u_image, uv);\n"
-    "}";
+static const char *fragShader = "#version 330\n"
+                                "uniform sampler2D u_image;"
+                                "in      vec2      uv;"
+                                "out     vec4      f_color;"
+                                "\n"
+                                "void main() {\n"
+                                "  f_color = texture(u_image, uv);\n"
+                                "}";
 
 static float uvBuffer[] = {
-    0.0, 0.0,
-    1.0, 0.0,
-    0.0, 1.0,
-    0.0, 1.0,
-    1.0, 0.0,
-    1.0, 1.0,
+    0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0,
 };
 
 S25ImageView::S25ImageView(QWidget *parent)
-    :QOpenGLWidget(parent),
-      m_archive{std::nullopt},
-      m_images{},
-      m_imageEntries{},
-      m_textures{},
-      m_viewportWidth{0},
-      m_viewportHeight{0}
-{
+    : QOpenGLWidget(parent), m_archive{std::nullopt}, m_images{},
+      m_imageEntries{}, m_textures{}, m_viewportWidth{0}, m_viewportHeight{0} {}
+
+int S25ImageView::getTotalLayers() const {
+  if (m_archive) {
+    return m_archive->getTotalLayers();
+  }
+
+  return 0;
+}
+
+int S25ImageView::getPictLayerFor(unsigned long layer) const {
+  if (m_archive && layer < m_imageEntries.size()) {
+    return m_imageEntries[layer];
+  }
+
+  return -1;
+}
+
+bool S25ImageView::getPictLayerIsValid(unsigned long layer) const {
+  if (m_archive && layer < m_images.size()) {
+    return !!m_images[layer] || m_imageEntries[layer] == -1;
+  }
+
+  return false;
+}
+
+void S25ImageView::setPictLayer(unsigned long layer, int pictLayer) {
+  if (m_archive && layer < m_images.size()) {
+    m_imageEntries[layer] = pictLayer;
+
+    loadImagesToTexture();
+    loadVertexBuffers();
+
+    update();
+  }
 }
 
 void S25ImageView::initializeGL() {
@@ -67,8 +89,8 @@ void S25ImageView::initializeGL() {
   f->glShaderSource(vShader, 1, &vertShader, nullptr);
   f->glCompileShader(vShader);
 
-  GLint  result;
-  GLint  log_length;
+  GLint result;
+  GLint log_length;
 
   f->glGetShaderiv(vShader, GL_COMPILE_STATUS, &result);
   f->glGetShaderiv(vShader, GL_INFO_LOG_LENGTH, &log_length);
@@ -131,7 +153,7 @@ void S25ImageView::paintGL() {
   qDebug() << "paintGL call";
 
   auto &archive = *m_archive;
-  auto entries = archive.getTotalLayers();
+  auto  entries = archive.getTotalLayers();
 
   f->glUseProgram(m_program);
   f->glUniform2f(0, m_viewportWidth, m_viewportHeight);
@@ -143,13 +165,7 @@ void S25ImageView::paintGL() {
   f->glEnableVertexAttribArray(1);
 
   f->glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
-  f->glVertexAttribPointer(
-      1,
-      2,
-      GL_FLOAT,
-      GL_FALSE,
-      0,
-      (void*) 0);
+  f->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
   for (size_t i = 0; i < entries; i++) {
     if (!m_images[i]) {
@@ -164,13 +180,7 @@ void S25ImageView::paintGL() {
     f->glBindTexture(GL_TEXTURE_2D, tex);
 
     f->glBindBuffer(GL_ARRAY_BUFFER, vtx);
-    f->glVertexAttribPointer(
-        0,
-        2,
-        GL_FLOAT,
-        GL_FALSE,
-        0,
-        (void*) 0);
+    f->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
     f->glDrawArrays(GL_TRIANGLES, 0, 6);
   }
@@ -179,11 +189,11 @@ void S25ImageView::paintGL() {
 }
 
 void S25ImageView::resizeGL(int width, int height) {
-  m_viewportWidth = width;
+  m_viewportWidth  = width;
   m_viewportHeight = height;
 }
 
-void S25ImageView::dragEnterEvent(QDragEnterEvent* event) {
+void S25ImageView::dragEnterEvent(QDragEnterEvent *event) {
   event->acceptProposedAction();
 }
 
@@ -202,22 +212,21 @@ void S25ImageView::dropEvent(QDropEvent *theEvent) {
   loadImagesToTexture();
   loadVertexBuffers();
 
+  emit imageLoaded();
+
   // force update
   update();
 }
 
-void S25ImageView::loadArchive(QString const& path) {
+void S25ImageView::loadArchive(QString const &path) {
   auto pathAsUtf8 = path.toUtf8();
-  auto arc = S25pArchive(pathAsUtf8);
+  auto arc        = S25pArchive(pathAsUtf8);
 
-  qDebug() << "image loaded: " << path
-           << ", with " << arc.getTotalEntries()
+  qDebug() << "image loaded: " << path << ", with " << arc.getTotalEntries()
            << "entries";
 
-  m_imageEntries.resize(arc.getTotalLayers(), 1);
-  if (arc.getTotalEntries() == 1) {
-    m_imageEntries[0] = 0;
-  }
+  // select nothing
+  m_imageEntries.resize(arc.getTotalLayers(), -1);
 
   m_archive = std::make_optional(std::move(arc));
 }
@@ -233,7 +242,7 @@ void S25ImageView::loadVertexBuffers() {
   qDebug() << "load vertex buffers";
 
   auto &archive = *m_archive;
-  auto entries = archive.getTotalLayers();
+  auto  entries = archive.getTotalLayers();
 
   // clear vertex buffers
   f->glDeleteBuffers(m_vertexBuffers.size(), m_vertexBuffers.data());
@@ -241,7 +250,7 @@ void S25ImageView::loadVertexBuffers() {
   m_vertexBuffers.resize(entries, 0);
   f->glGenBuffers(entries, m_vertexBuffers.data());
 
-  float max_width = 0;
+  float max_width  = 0;
   float max_height = 0;
 
   for (size_t i = 0; i < entries; i++) {
@@ -251,7 +260,7 @@ void S25ImageView::loadVertexBuffers() {
 
     const auto &img = *m_images[i];
 
-    max_width = fmax(img.getWidth(), max_width);
+    max_width  = fmax(img.getWidth(), max_width);
     max_height = fmax(img.getHeight(), max_height);
   }
 
@@ -262,18 +271,13 @@ void S25ImageView::loadVertexBuffers() {
 
     const auto &img = *m_images[i];
 
-    auto x1 = (float) img.getOffsetX() - max_width * 0.5f;
-    auto y1 = (float) img.getOffsetY() - max_height * 0.5f;
-    auto x2 = x1 + (float) img.getWidth();
-    auto y2 = y1 + (float) img.getHeight();
+    auto x1 = (float)img.getOffsetX() - max_width * 0.5f;
+    auto y1 = (float)img.getOffsetY() - max_height * 0.5f;
+    auto x2 = x1 + (float)img.getWidth();
+    auto y2 = y1 + (float)img.getHeight();
 
     float buf[] = {
-        x1, y1,
-        x2, y1,
-        x1, y2,
-        x1, y2,
-        x2, y1,
-        x2, y2,
+        x1, y1, x2, y1, x1, y2, x1, y2, x2, y1, x2, y2,
     };
 
     f->glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffers[i]);
@@ -290,7 +294,7 @@ void S25ImageView::loadImagesToTexture() {
   }
 
   auto &archive = *m_archive;
-  auto entries = archive.getTotalLayers();
+  auto  entries = archive.getTotalLayers();
 
   // load S25 images
   m_images.clear();
@@ -319,25 +323,15 @@ void S25ImageView::loadImagesToTexture() {
       continue;
     }
 
-    auto tex = m_textures[i];
+    auto        tex = m_textures[i];
     const auto &img = *m_images[i];
 
-    qDebug() << "load entry " << i
-             << "; (w, h) = " << img.getWidth()
-             << ", " << img.getHeight();
+    qDebug() << "load entry " << i << "; (w, h) = " << img.getWidth() << ", "
+             << img.getHeight();
 
     f->glBindTexture(GL_TEXTURE_2D, tex);
-    f->glTexImage2D(
-        GL_TEXTURE_2D,
-        0,
-        GL_RGBA,
-        img.getWidth(),
-        img.getHeight(),
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        img.getRGBABuffer(nullptr)
-        );
+    f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.getWidth(), img.getHeight(),
+                    0, GL_RGBA, GL_UNSIGNED_BYTE, img.getRGBABuffer(nullptr));
 
     f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

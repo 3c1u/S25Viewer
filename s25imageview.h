@@ -5,14 +5,13 @@
 #include <optional>
 #include <vector>
 
-#include <QWidget>
-#include <QOpenGLWidget>
 #include <QOpenGLVertexArrayObject>
+#include <QOpenGLWidget>
+#include <QWidget>
 
 #include "S25DecoderWrapper.h"
 
-class S25ImageView : public QOpenGLWidget
-{
+class S25ImageView : public QOpenGLWidget {
   Q_OBJECT
 public:
   S25ImageView(QWidget *parent);
@@ -24,12 +23,22 @@ public:
 
   // handle drop event
   virtual void dropEvent(QDropEvent *theEvent) override;
-  virtual void dragEnterEvent(QDragEnterEvent* event) override;
+  virtual void dragEnterEvent(QDragEnterEvent *event) override;
+
+  // for S25LayerModel
+  int  getTotalLayers() const;
+  int  getPictLayerFor(unsigned long layer) const;
+  bool getPictLayerIsValid(unsigned long layer) const;
+
+  void setPictLayer(unsigned long layer, int pictLayer);
+
+signals:
+  void imageLoaded();
 
 private:
-  std::optional<S25pArchive>                  m_archive;
-  std::vector<std::optional<S25pImage>>       m_images;
-  std::vector<int32_t>                        m_imageEntries;
+  std::optional<S25pArchive>            m_archive;
+  std::vector<std::optional<S25pImage>> m_images;
+  std::vector<int32_t>                  m_imageEntries;
 
   std::vector<GLuint> m_textures;
   std::vector<GLuint> m_vertexBuffers;
@@ -37,12 +46,12 @@ private:
   GLuint m_uvBuffer;
 
   QOpenGLVertexArrayObject m_vao;
-  GLuint m_program;
+  GLuint                   m_program;
 
   int m_viewportWidth;
   int m_viewportHeight;
 
-  void loadArchive(QString const& path);
+  void loadArchive(QString const &path);
   void loadImagesToTexture();
   void loadVertexBuffers();
 };

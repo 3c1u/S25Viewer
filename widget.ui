@@ -48,10 +48,10 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QListView" name="listView">
+     <widget class="QTableView" name="tableView">
       <property name="minimumSize">
        <size>
-        <width>100</width>
+        <width>0</width>
         <height>0</height>
        </size>
       </property>
@@ -60,6 +60,12 @@
         <width>300</width>
         <height>16777215</height>
        </size>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::AllEditTriggers</set>
+      </property>
+      <property name="alternatingRowColors">
+       <bool>true</bool>
       </property>
      </widget>
     </widget>

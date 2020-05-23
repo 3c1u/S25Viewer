@@ -34,6 +34,8 @@ if(ANDROID)
     widget.cpp
     widget.h
     widget.ui
+    S25LayerModel.cpp
+    S25LayerModel.h
     s25decoder/S25Decoder.h
     S25DecoderWrapper.h
   )
@@ -45,6 +47,8 @@ else()
     widget.cpp
     widget.h
     widget.ui
+    S25LayerModel.cpp
+    S25LayerModel.h
     s25decoder/S25Decoder.h
     S25DecoderWrapper.h
   )
