@@ -253,6 +253,9 @@ void S25ImageView::loadVertexBuffers() {
   float max_width  = 0;
   float max_height = 0;
 
+  float max_oX = 0;
+  float max_oY = 0;
+
   for (size_t i = 0; i < entries; i++) {
     if (!m_images[i]) {
       continue;
@@ -260,8 +263,15 @@ void S25ImageView::loadVertexBuffers() {
 
     const auto &img = *m_images[i];
 
-    max_width  = fmax(img.getWidth(), max_width);
-    max_height = fmax(img.getHeight(), max_height);
+    if (max_width < img.getWidth()) {
+      max_width = img.getWidth();
+      max_oX    = img.getOffsetX();
+    }
+
+    if (max_height < img.getHeight()) {
+      max_height = img.getHeight();
+      max_oY     = img.getOffsetY();
+    }
   }
 
   for (size_t i = 0; i < entries; i++) {
@@ -271,8 +281,8 @@ void S25ImageView::loadVertexBuffers() {
 
     const auto &img = *m_images[i];
 
-    auto x1 = (float)img.getOffsetX() - max_width * 0.5f;
-    auto y1 = (float)img.getOffsetY() - max_height * 0.5f;
+    auto x1 = (float)img.getOffsetX() - max_width * 0.5f - max_oX;
+    auto y1 = (float)img.getOffsetY() - max_height * 0.5f - max_oY;
     auto x2 = x1 + (float)img.getWidth();
     auto y2 = y1 + (float)img.getHeight();
 
