@@ -61,6 +61,9 @@
         <height>16777215</height>
        </size>
       </property>
+      <property name="autoScrollMargin">
+       <number>16</number>
+      </property>
       <property name="editTriggers">
        <set>QAbstractItemView::AllEditTriggers</set>
       </property>

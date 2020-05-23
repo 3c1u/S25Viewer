@@ -32,7 +32,7 @@ Qt::ItemFlags S25LayerModel::flags(const QModelIndex &index) const {
     return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
     break;
   case kS25LayerModelPictLayerNumber:
-    return Qt::ItemIsEnabled | Qt::ItemIsEditable;
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable;
     break;
   /* case kS25LayerModelVisibilityFlag:
    */
