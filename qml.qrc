@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/">
         <file>viewer.qml</file>
-        <file>qtquickcontrols2.conf</file>
     </qresource>
 </RCC>

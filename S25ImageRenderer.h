@@ -9,6 +9,7 @@
 #include <QDropEvent>
 #include <QOpenGLFunctions>
 #include <QOpenGLVertexArrayObject>
+#include <QQuickWindow>
 #include <QUrl>
 
 #include "S25DecoderWrapper.h"
@@ -16,12 +17,9 @@
 class S25ImageRenderer : public QObject, protected QOpenGLFunctions {
   Q_OBJECT
 public:
-  S25ImageRenderer();
+  S25ImageRenderer(QQuickWindow *window);
 
-  // override functions
-  void initializeGL();
-  void paintGL();
-  void resizeGL(int w, int h);
+  void resize(int w, int h);
 
   // for S25Image
   void loadImage(QUrl const &path);
@@ -34,10 +32,16 @@ public:
   void setPictLayer(unsigned long layer, int pictLayer);
 
 signals:
-  void imageLoaded(QUrl theUrl);
+  void imageLoaded(QUrl const &theUrl);
   void update();
 
+public slots:
+  void init();
+  void paint();
+
 private:
+  QQuickWindow *m_window;
+
   std::optional<S25pArchive>            m_archive;
   std::vector<std::optional<S25pImage>> m_images;
   std::vector<int32_t>                  m_imageEntries;
@@ -49,6 +53,8 @@ private:
 
   QOpenGLVertexArrayObject m_vao;
   GLuint                   m_program;
+
+  bool m_isInitialized;
 
   int m_viewportWidth;
   int m_viewportHeight;
