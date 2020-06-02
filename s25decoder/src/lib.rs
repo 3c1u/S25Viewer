@@ -1,8 +1,5 @@
 #![allow(non_snake_case)]
 
-pub(crate) mod s25;
-pub(crate) mod utils;
-
 use s25::{S25Archive, S25Image};
 use std::ffi::CStr;
 
@@ -47,7 +44,7 @@ pub unsafe extern "C" fn S25ArchiveGetTotalEntries(
     archive: *const S25Archive,
 ) -> usize {
     let archive = &*archive;
-    archive.entries.len()
+    archive.total_entries()
 }
 
 // image
