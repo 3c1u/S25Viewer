@@ -61,10 +61,9 @@ ApplicationWindow {
 
             itemDelegate: TextInput {
                 text: styleData.value
-                onTextChanged: {
+                onTextEdited: {
                     layerModel.setData(layerModel.index(styleData.row, styleData.column),
-                                       styleData.value,
-                                       "pictLayer");
+                                       text);
                 }
             }
         }

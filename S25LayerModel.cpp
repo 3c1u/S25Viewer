@@ -45,13 +45,19 @@ Qt::ItemFlags S25LayerModel::flags(const QModelIndex &index) const {
 
 bool S25LayerModel::setData(const QModelIndex &index, const QVariant &value,
                             int role) {
-  auto val = value.toInt();
+  auto val = value.toString().toInt();
 
-  switch (role) {
-  case kS25LayerModelLayerNumber:
+  if (!m_image || role != Qt::EditRole) {
+    return false;
+  }
+
+  switch (index.column()) {
+  case 0:
     break;
-  case kS25LayerModelPictLayerNumber:
-    m_image->setPictLayer(index.row(), val);
+  case 1:
+    if (m_image) {
+      m_image->setPictLayer(index.row(), val);
+    }
     emit dataChanged(index, index, QVector{role});
     return true;
     break;
