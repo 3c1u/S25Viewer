@@ -3,16 +3,16 @@
 #include <QColor>
 #include <QDebug>
 
-S25LayerModel::S25LayerModel(QObject *parent, S25ImageView *view)
-    : QAbstractTableModel(parent), m_view{view} {}
+S25LayerModel::S25LayerModel(QObject *parent) : QAbstractTableModel(parent) {}
 
 void S25LayerModel::updateModel() { emit layoutChanged(); }
 
 int S25LayerModel::rowCount(const QModelIndex &parent) const {
   Q_UNUSED(parent)
+  qDebug() << "S25LayerModel::rowCount";
 
-  if (m_view) {
-    return m_view->getTotalLayers();
+  if (m_image) {
+    return m_image->getTotalLayers();
   } else {
     return 0;
   }
@@ -20,11 +20,10 @@ int S25LayerModel::rowCount(const QModelIndex &parent) const {
 
 int S25LayerModel::columnCount(const QModelIndex &parent) const {
   Q_UNUSED(parent)
+  qDebug() << "S25LayerModel::columnCount";
 
   return 2;
 }
-
-void S25LayerModel::bindView(S25ImageView *view) { m_view = view; }
 
 Qt::ItemFlags S25LayerModel::flags(const QModelIndex &index) const {
   switch (index.column()) {
@@ -46,13 +45,19 @@ Qt::ItemFlags S25LayerModel::flags(const QModelIndex &index) const {
 
 bool S25LayerModel::setData(const QModelIndex &index, const QVariant &value,
                             int role) {
-  auto val = value.toInt();
+  auto val = value.toString().toInt();
+
+  if (!m_image || role != Qt::EditRole) {
+    return false;
+  }
 
   switch (index.column()) {
-  case kS25LayerModelLayerNumber:
+  case 0:
     break;
-  case kS25LayerModelPictLayerNumber:
-    m_view->setPictLayer(index.row(), val);
+  case 1:
+    if (m_image) {
+      m_image->setPictLayer(index.row(), val);
+    }
     emit dataChanged(index, index, QVector{role});
     return true;
     break;
@@ -69,22 +74,18 @@ bool S25LayerModel::setData(const QModelIndex &index, const QVariant &value,
 }
 
 QVariant S25LayerModel::data(const QModelIndex &index, int role) const {
+  qDebug() << "S25LayerModel::data";
+
   if (!index.isValid()) {
     return QVariant{};
   }
 
-  switch (index.column()) {
+  switch (role) {
   case kS25LayerModelLayerNumber:
-    if (role == Qt::DisplayRole)
-      return QString("Layer %1").arg(index.row() + 1);
-
+    return QString("Layer %1").arg(index.row() + 1);
     break;
   case kS25LayerModelPictLayerNumber:
-    if (role == Qt::DisplayRole || role == Qt::EditRole)
-      return m_view->getPictLayerFor(index.row());
-    else if (role == Qt::ForegroundRole)
-      if (!m_view->getPictLayerIsValid(index.row()))
-        return QColor::fromRgb(255, 0, 0);
+    return m_image->getPictLayerFor(index.row());
     break;
   /* case kS25LayerModelVisibilityFlag:
     if (role == Qt::CheckStateRole || role == Qt::EditRole)
@@ -98,25 +99,20 @@ QVariant S25LayerModel::data(const QModelIndex &index, int role) const {
   return QVariant{};
 }
 
-QVariant S25LayerModel::headerData(int section, Qt::Orientation orientation,
-                                   int role) const {
-  if (orientation == Qt::Vertical || role != Qt::DisplayRole) {
-    return QVariant{};
-  }
+S25Image *S25LayerModel::image() const { return m_image; }
 
-  switch (section) {
-  case kS25LayerModelLayerNumber:
-    return tr("Layer");
-    break;
-  case kS25LayerModelPictLayerNumber:
-    return tr("Pict Layer");
-    break;
-  case kS25LayerModelVisibilityFlag:
-    return tr("Visible");
-    break;
-  default:
-    break;
-  }
+void S25LayerModel::setImage(S25Image *image) {
+  m_image = image;
 
-  return QVariant{};
+  connect(m_image, &S25Image::update, this, &S25LayerModel::updateModel);
+
+  emit imageChanged();
+}
+
+QHash<int, QByteArray> S25LayerModel::roleNames() const {
+  qDebug() << "S25LayerModel::roleNames";
+  return {
+      {kS25LayerModelLayerNumber, "layerNo"},
+      {kS25LayerModelPictLayerNumber, "pictLayer"},
+  };
 }

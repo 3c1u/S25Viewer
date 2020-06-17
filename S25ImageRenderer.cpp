@@ -5,7 +5,7 @@
 #include <QOpenGLFunctions>
 
 #include "S25DecoderWrapper.h"
-#include "s25imageview.h"
+#include "S25ImageRenderer.h"
 
 static const char *vertShader =
     "#version 330\n"
@@ -35,11 +35,12 @@ static float uvBuffer[] = {
     0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0,
 };
 
-S25ImageView::S25ImageView(QWidget *parent)
-    : QOpenGLWidget(parent), m_archive{std::nullopt}, m_images{},
-      m_imageEntries{}, m_textures{}, m_viewportWidth{0}, m_viewportHeight{0} {}
+S25ImageRenderer::S25ImageRenderer(QQuickWindow *window)
+    : m_window{window}, m_archive{std::nullopt}, m_images{}, m_imageEntries{},
+      m_textures{}, m_isInitialized{false}, m_viewportWidth{0},
+      m_viewportHeight{0} {}
 
-int S25ImageView::getTotalLayers() const {
+int S25ImageRenderer::getTotalLayers() const {
   if (m_archive) {
     return m_archive->getTotalLayers();
   }
@@ -47,7 +48,7 @@ int S25ImageView::getTotalLayers() const {
   return 0;
 }
 
-int S25ImageView::getPictLayerFor(unsigned long layer) const {
+int S25ImageRenderer::getPictLayerFor(unsigned long layer) const {
   if (m_archive && layer < m_imageEntries.size()) {
     return m_imageEntries[layer];
   }
@@ -55,7 +56,7 @@ int S25ImageView::getPictLayerFor(unsigned long layer) const {
   return -1;
 }
 
-bool S25ImageView::getPictLayerIsValid(unsigned long layer) const {
+bool S25ImageRenderer::getPictLayerIsValid(unsigned long layer) const {
   if (m_archive && layer < m_images.size()) {
     return !!m_images[layer] || m_imageEntries[layer] == -1;
   }
@@ -63,90 +64,100 @@ bool S25ImageView::getPictLayerIsValid(unsigned long layer) const {
   return false;
 }
 
-void S25ImageView::setPictLayer(unsigned long layer, int pictLayer) {
+void S25ImageRenderer::setPictLayer(unsigned long layer, int pictLayer) {
   if (m_archive && layer < m_images.size()) {
     m_imageEntries[layer] = pictLayer;
 
     loadImagesToTexture();
     loadVertexBuffers();
 
-    update();
+    emit update();
   }
 }
 
-void S25ImageView::initializeGL() {
-  auto f = QOpenGLContext::currentContext()->functions();
+void S25ImageRenderer::init() {
+  if (m_isInitialized) {
+    return;
+  }
 
-  f->glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-  f->glClearDepthf(1.0f);
+  m_isInitialized = true;
 
-  f->glEnable(GL_FRAMEBUFFER_SRGB);
+  QSGRendererInterface *rif = m_window->rendererInterface();
+  qDebug() << "api: " << rif->graphicsApi();
+
+  Q_ASSERT(rif->graphicsApi() == QSGRendererInterface::OpenGL ||
+           rif->graphicsApi() == QSGRendererInterface::OpenGLRhi);
+
+  initializeOpenGLFunctions();
+
+  glEnable(GL_FRAMEBUFFER_SRGB);
 
   // create shader program
 
-  auto vShader = f->glCreateShader(GL_VERTEX_SHADER);
+  auto vShader = glCreateShader(GL_VERTEX_SHADER);
 
-  f->glShaderSource(vShader, 1, &vertShader, nullptr);
-  f->glCompileShader(vShader);
+  glShaderSource(vShader, 1, &vertShader, nullptr);
+  glCompileShader(vShader);
 
   GLint result;
   GLint log_length;
 
-  f->glGetShaderiv(vShader, GL_COMPILE_STATUS, &result);
-  f->glGetShaderiv(vShader, GL_INFO_LOG_LENGTH, &log_length);
+  glGetShaderiv(vShader, GL_COMPILE_STATUS, &result);
+  glGetShaderiv(vShader, GL_INFO_LOG_LENGTH, &log_length);
 
   std::vector<char> errMessage(log_length);
-  f->glGetShaderInfoLog(vShader, log_length, NULL, errMessage.data());
+  glGetShaderInfoLog(vShader, log_length, NULL, errMessage.data());
   qDebug() << "vertex shader status: " << errMessage.data();
 
-  auto fShader = f->glCreateShader(GL_FRAGMENT_SHADER);
+  auto fShader = glCreateShader(GL_FRAGMENT_SHADER);
 
-  f->glShaderSource(fShader, 1, &fragShader, nullptr);
-  f->glCompileShader(fShader);
+  glShaderSource(fShader, 1, &fragShader, nullptr);
+  glCompileShader(fShader);
 
-  f->glGetShaderiv(fShader, GL_COMPILE_STATUS, &result);
-  f->glGetShaderiv(fShader, GL_INFO_LOG_LENGTH, &log_length);
+  glGetShaderiv(fShader, GL_COMPILE_STATUS, &result);
+  glGetShaderiv(fShader, GL_INFO_LOG_LENGTH, &log_length);
 
   errMessage.resize(log_length, 0);
-  f->glGetShaderInfoLog(fShader, log_length, NULL, errMessage.data());
+  glGetShaderInfoLog(fShader, log_length, NULL, errMessage.data());
   qDebug() << "frag shader status: " << errMessage.data();
 
-  auto program = f->glCreateProgram();
-  f->glAttachShader(program, vShader);
-  f->glAttachShader(program, fShader);
-  f->glLinkProgram(program);
+  auto program = glCreateProgram();
+  glAttachShader(program, vShader);
+  glAttachShader(program, fShader);
+  glLinkProgram(program);
 
-  f->glGetProgramiv(program, GL_LINK_STATUS, &result);
-  f->glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
+  glGetProgramiv(program, GL_LINK_STATUS, &result);
+  glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
 
   errMessage.resize(log_length, 0);
-  f->glGetProgramInfoLog(program, log_length, NULL, errMessage.data());
+  glGetProgramInfoLog(program, log_length, NULL, errMessage.data());
   qDebug() << "link status: " << errMessage.data();
 
-  f->glDeleteShader(vShader);
-  f->glDeleteShader(fShader);
+  glDeleteShader(vShader);
+  glDeleteShader(fShader);
 
   m_program = program;
 
-  m_vao.create();
-  m_vao.bind();
+  // m_vao.create();
+  // m_vao.bind();
 
-  f->glGenBuffers(1, &m_uvBuffer);
-  f->glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
-  f->glBufferData(GL_ARRAY_BUFFER, sizeof(uvBuffer), uvBuffer, GL_STATIC_DRAW);
+  glGenBuffers(1, &m_uvBuffer);
+  glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(uvBuffer), uvBuffer, GL_STATIC_DRAW);
 }
 
-void S25ImageView::paintGL() {
-  auto f = QOpenGLContext::currentContext()->functions();
+void S25ImageRenderer::paint() {
+  m_window->beginExternalCommands();
 
-  // clear
-  f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // m_vao.bind();
 
-  m_vao.bind();
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
 
   // guard empty S25 archive
   if (!m_archive) {
-    f->glFinish();
+    m_window->resetOpenGLState();
+    m_window->endExternalCommands();
     return;
   }
 
@@ -155,17 +166,22 @@ void S25ImageView::paintGL() {
   auto &archive = *m_archive;
   auto  entries = archive.getTotalLayers();
 
-  f->glUseProgram(m_program);
-  f->glUniform2f(0, m_viewportWidth, m_viewportHeight);
+  glUseProgram(m_program);
+  glUniform2f(0, m_viewportWidth, m_viewportHeight);
 
-  f->glEnable(GL_BLEND);
-  f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  auto pixelRatio = m_window->devicePixelRatio();
+  glViewport(0, 0, m_viewportWidth * pixelRatio, m_viewportHeight * pixelRatio);
 
-  f->glEnableVertexAttribArray(0);
-  f->glEnableVertexAttribArray(1);
+  glDisable(GL_DEPTH_TEST);
 
-  f->glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
-  f->glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  glEnableVertexAttribArray(0);
+  glEnableVertexAttribArray(1);
+
+  glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
   for (size_t i = 0; i < entries; i++) {
     if (!m_images[i]) {
@@ -177,37 +193,33 @@ void S25ImageView::paintGL() {
     auto tex = m_textures[i];
     auto vtx = m_vertexBuffers[i];
 
-    f->glBindTexture(GL_TEXTURE_2D, tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
 
-    f->glBindBuffer(GL_ARRAY_BUFFER, vtx);
-    f->glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glBindBuffer(GL_ARRAY_BUFFER, vtx);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
-    f->glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
   }
 
-  f->glFinish();
+  glDisableVertexAttribArray(0);
+  glDisableVertexAttribArray(1);
+
+  glUseProgram(0);
+
+  m_window->resetOpenGLState();
+  m_window->endExternalCommands();
 }
 
-void S25ImageView::resizeGL(int width, int height) {
+void S25ImageRenderer::resize(int width, int height) {
   m_viewportWidth  = width;
   m_viewportHeight = height;
 }
 
-void S25ImageView::dragEnterEvent(QDragEnterEvent *event) {
-  event->acceptProposedAction();
-}
-
-void S25ImageView::dropEvent(QDropEvent *theEvent) {
+void S25ImageRenderer::loadImage(QUrl const &theUrl) {
   qDebug() << "s25 drop event";
 
-  // load S25 image
-  if (!theEvent->mimeData()->hasUrls()) {
-    return;
-  }
-
-  const auto url = theEvent->mimeData()->urls().first();
-  if (loadArchive(url.path())) {
-    emit imageLoaded(url);
+  if (loadArchive(theUrl.path())) {
+    emit imageLoaded(theUrl);
   }
 
   // load S25 into texture
@@ -215,10 +227,10 @@ void S25ImageView::dropEvent(QDropEvent *theEvent) {
   loadVertexBuffers();
 
   // force update
-  update();
+  emit update();
 }
 
-bool S25ImageView::loadArchive(QString const &path) {
+bool S25ImageRenderer::loadArchive(QString const &path) {
   auto pathAsUtf8 = path.toUtf8();
   auto arc        = S25pArchive(pathAsUtf8);
 
@@ -239,8 +251,8 @@ bool S25ImageView::loadArchive(QString const &path) {
   return true;
 }
 
-void S25ImageView::loadVertexBuffers() {
-  auto f = QOpenGLContext::currentContext()->functions();
+void S25ImageRenderer::loadVertexBuffers() {
+  m_window->beginExternalCommands();
 
   // guard empty S25 archive
   if (!m_archive) {
@@ -253,10 +265,10 @@ void S25ImageView::loadVertexBuffers() {
   auto  entries = archive.getTotalLayers();
 
   // clear vertex buffers
-  f->glDeleteBuffers(m_vertexBuffers.size(), m_vertexBuffers.data());
+  glDeleteBuffers(m_vertexBuffers.size(), m_vertexBuffers.data());
 
   m_vertexBuffers.resize(entries, 0);
-  f->glGenBuffers(entries, m_vertexBuffers.data());
+  glGenBuffers(entries, m_vertexBuffers.data());
 
   float max_width  = 0;
   float max_height = 0;
@@ -298,13 +310,16 @@ void S25ImageView::loadVertexBuffers() {
         x1, y1, x2, y1, x1, y2, x1, y2, x2, y1, x2, y2,
     };
 
-    f->glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffers[i]);
-    f->glBufferData(GL_ARRAY_BUFFER, sizeof(buf), buf, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffers[i]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(buf), buf, GL_STATIC_DRAW);
   }
+
+  m_window->resetOpenGLState();
+  m_window->endExternalCommands();
 }
 
-void S25ImageView::loadImagesToTexture() {
-  auto f = QOpenGLContext::currentContext()->functions();
+void S25ImageRenderer::loadImagesToTexture() {
+  m_window->beginExternalCommands();
 
   // guard empty S25 archive
   if (!m_archive) {
@@ -330,11 +345,11 @@ void S25ImageView::loadImagesToTexture() {
   }
 
   // clear textures
-  f->glDeleteTextures(m_textures.size(), m_textures.data());
+  glDeleteTextures(m_textures.size(), m_textures.data());
 
   // generate textures
   m_textures.resize(entries, 0);
-  f->glGenTextures(entries, m_textures.data());
+  glGenTextures(entries, m_textures.data());
 
   for (size_t i = 0; i < entries; i++) {
     if (!m_images[i]) {
@@ -347,13 +362,17 @@ void S25ImageView::loadImagesToTexture() {
     qDebug() << "load entry " << i << "; (w, h) = " << img.getWidth() << ", "
              << img.getHeight();
 
-    f->glBindTexture(GL_TEXTURE_2D, tex);
-    f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.getWidth(), img.getHeight(),
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, img.getRGBABuffer(nullptr));
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.getWidth(),
+                 img.getHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 img.getRGBABuffer(nullptr));
 
-    f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   }
+
+  m_window->resetOpenGLState();
+  m_window->endExternalCommands();
 }

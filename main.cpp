@@ -1,7 +1,10 @@
-#include "widget.h"
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
 
-#include <QApplication>
 #include <QSurfaceFormat>
+
+#include "S25LayerModel.h"
+#include "s25image.h"
 
 int main(int argc, char *argv[]) {
   QSurfaceFormat fmt;
@@ -9,8 +12,23 @@ int main(int argc, char *argv[]) {
   fmt.setProfile(QSurfaceFormat::CoreProfile);
   QSurfaceFormat::setDefaultFormat(fmt);
 
-  QApplication a(argc, argv);
-  Widget       w;
-  w.show();
-  return a.exec();
+  QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+  QGuiApplication app(argc, argv);
+
+  // register
+  qmlRegisterType<S25LayerModel>("S25Viewer", 1, 0, "LayerModel");
+  qmlRegisterType<S25Image>("S25Viewer", 1, 0, "Image");
+
+  QQmlApplicationEngine engine;
+  const QUrl            url(QStringLiteral("qrc:/viewer.qml"));
+  QObject::connect(
+      &engine, &QQmlApplicationEngine::objectCreated, &app,
+      [url](QObject *obj, const QUrl &objUrl) {
+        if (!obj && url == objUrl)
+          QCoreApplication::exit(-1);
+      },
+      Qt::QueuedConnection);
+  engine.load(url);
+
+  return app.exec();
 }

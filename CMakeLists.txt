@@ -24,33 +24,33 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #    endif()
 #endif()
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets Core Quick REQUIRED)
 
 if(ANDROID)
   add_library(S25Viewer SHARED
     main.cpp
-    s25imageview.cpp
-    s25imageview.h
-    widget.cpp
-    widget.h
-    widget.ui
+    S25ImageRenderer.cpp
+    S25ImageRenderer.h
+    s25image.cpp
+    s25image.h
     S25LayerModel.cpp
     S25LayerModel.h
     s25decoder/S25Decoder.h
     S25DecoderWrapper.h
+    qml.qrc
   )
 else()
   add_executable(S25Viewer
     main.cpp
-    s25imageview.cpp
-    s25imageview.h
-    widget.cpp
-    widget.h
-    widget.ui
+    S25ImageRenderer.cpp
+    S25ImageRenderer.h
+    s25image.cpp
+    s25image.h
     S25LayerModel.cpp
     S25LayerModel.h
     s25decoder/S25Decoder.h
     S25DecoderWrapper.h
+    qml.qrc
   )
 endif()
 
@@ -60,5 +60,5 @@ execute_process(COMMAND cd ${CMAKE_BINARY_DIR})
 
 target_link_directories(S25Viewer PRIVATE ${CMAKE_SOURCE_DIR}/s25decoder/target/release)
 
-target_link_libraries(S25Viewer PRIVATE Qt5::Widgets)
+target_link_libraries(S25Viewer PRIVATE Qt5::Widgets Qt5::Core Qt5::Quick)
 target_link_libraries(S25Viewer PRIVATE s25decoder)
