@@ -206,7 +206,7 @@ void S25ImageView::dropEvent(QDropEvent *theEvent) {
   }
 
   const auto url = theEvent->mimeData()->urls().first();
-  if (loadArchive(url.path())) {
+  if (loadArchive(url.toLocalFile())) {
     emit imageLoaded(url);
   }
 

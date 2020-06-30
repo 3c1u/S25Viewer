@@ -40,7 +40,7 @@ if(ANDROID)
     S25DecoderWrapper.h
   )
 else()
-  add_executable(S25Viewer
+  add_executable(S25Viewer WIN32
     main.cpp
     s25imageview.cpp
     s25imageview.h
