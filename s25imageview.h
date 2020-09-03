@@ -29,7 +29,8 @@ public:
 
   // handle touch events
   virtual bool event(QEvent *event) override;
-  void         gestureEvent(QGestureEvent *event);
+  virtual void gestureEvent(QGestureEvent *event);
+  virtual void wheelEvent(QWheelEvent *event) override;
 
   // for S25LayerModel
   int  getTotalLayers() const;
@@ -59,7 +60,8 @@ private:
   int m_viewportWidth;
   int m_viewportHeight;
 
-  qreal m_currentScale, m_scale;
+  qreal  m_currentScale, m_scale;
+  QPoint m_offset;
 
   bool loadArchive(QString const &path);
   void loadImagesToTexture();

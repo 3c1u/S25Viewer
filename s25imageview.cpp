@@ -18,9 +18,8 @@ static const char *vertShader =
     "uniform   mat4  transform;\n"
     "\n"
     "void main() {\n"
-    "  vec2 pos = vec2(vert.x / viewport.x, - vert.y / viewport.y);"
     "  uv = uv_;\n"
-    "  gl_Position = transform * vec4(pos, 0, 1);\n"
+    "  gl_Position = transform * vec4(vert, 0, 1);\n"
     "}";
 
 static const char *fragShader = "#version 330\n"
@@ -79,6 +78,11 @@ void S25ImageView::gestureEvent(QGestureEvent *event) {
   }
 
   // redraw
+  update();
+}
+
+void S25ImageView::wheelEvent(QWheelEvent *event) {
+  m_offset += event->pixelDelta();
   update();
 }
 
@@ -205,8 +209,10 @@ void S25ImageView::paintGL() {
   f->glUniform2f(m_viewport, m_viewportWidth, m_viewportHeight);
 
   // create transform
-  auto const tr =
-      QTransform().scale(m_scale * m_currentScale, m_scale * m_currentScale);
+  auto const tr = QTransform()
+                      .scale(1.0 / m_viewportWidth, -1.0 / m_viewportHeight)
+                      .scale(m_scale * m_currentScale, m_scale * m_currentScale)
+                      .translate(m_offset.x(), m_offset.y());
 
   GLfloat mat[16] = {
       static_cast<float>(tr.m11()),
@@ -280,6 +286,10 @@ void S25ImageView::dropEvent(QDropEvent *theEvent) {
   if (loadArchive(url.toLocalFile())) {
     emit imageLoaded(url);
   }
+
+  m_offset       = QPoint();
+  m_currentScale = 1.0;
+  m_scale        = 1.0;
 
   // load S25 into texture
   loadImagesToTexture();
