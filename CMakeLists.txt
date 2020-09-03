@@ -40,7 +40,7 @@ if(ANDROID)
     S25DecoderWrapper.h
   )
 else()
-  add_executable(S25Viewer WIN32
+  add_executable(S25Viewer MACOSX_BUNDLE WIN32
     main.cpp
     s25imageview.cpp
     s25imageview.h
@@ -54,9 +54,26 @@ else()
   )
 endif()
 
-execute_process(COMMAND cd ${CMAKE_SOURCE_DIR}/s25decoder && cargo build --release)
+if(APPLE)
+  set_target_properties(S25Viewer PROPERTIES
+    MACOSX_BUNDLE_COPYRIGHT "Copyright (c) 2020 Hikaru Terazono (3c1u). All rights reserved."
+    MACOSX_BUNDLE_LONG_VERSION_STRING "1.1.0"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "1.1.0"
+    MACOSX_BUNDLE_BUNDLE_VERSION "1.1.0"
+    MACOSX_BUNDLE_BUNDLE_NAME "S25 Viewer"
+    MACOSX_BUNDLE_INFO_STRING "S25 Viewer"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "tokyo.vulpesgames.3c1u.s25viewer"
+  )
+endif()
 
-target_link_directories(S25Viewer PRIVATE ${CMAKE_SOURCE_DIR}/s25decoder/target/release)
+add_custom_target(
+    s25decoder-build
+    COMMAND cargo build --release
+)
+
+target_link_directories(S25Viewer PRIVATE ${CMAKE_SOURCE_DIR}/target/release)
+
+add_dependencies(S25Viewer s25decoder-build)
 
 target_link_libraries(S25Viewer PRIVATE Qt5::Widgets)
 target_link_libraries(S25Viewer PRIVATE s25decoder)
