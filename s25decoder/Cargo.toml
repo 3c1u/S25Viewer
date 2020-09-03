@@ -11,4 +11,4 @@ crate-type = ["staticlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-s25 = "0.1.1"
+s25 = "0.2.1"

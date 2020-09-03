@@ -88,8 +88,8 @@ pub unsafe extern "C" fn S25ImageGetRGBABufferView(
     let image = &*image;
 
     if !size.is_null() {
-        *size = image.rgba_buffer.len();
+        *size = image.rgba_buffer().len();
     }
     
-    image.rgba_buffer.as_ptr()
+    image.rgba_buffer().as_ptr()
 }
