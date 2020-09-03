@@ -15,11 +15,12 @@ static const char *vertShader =
     "          vec2  uv_;\n"
     "out       vec2  uv;\n"
     "uniform   vec2  viewport;\n"
+    "uniform   mat4  transform;\n"
     "\n"
     "void main() {\n"
     "  vec2 pos = vec2(vert.x / viewport.x, - vert.y / viewport.y);"
     "  uv = uv_;\n"
-    "  gl_Position = vec4(pos, 0, 1);\n"
+    "  gl_Position = transform * vec4(pos, 0, 1);\n"
     "}";
 
 static const char *fragShader = "#version 330\n"
@@ -37,7 +38,49 @@ static float uvBuffer[] = {
 
 S25ImageView::S25ImageView(QWidget *parent)
     : QOpenGLWidget(parent), m_archive{std::nullopt}, m_images{},
-      m_imageEntries{}, m_textures{}, m_viewportWidth{0}, m_viewportHeight{0} {}
+      m_imageEntries{}, m_textures{}, m_viewportWidth{0},
+      m_currentScale{1}, m_scale{1} {
+  grabGesture(Qt::PanGesture);
+  grabGesture(Qt::PinchGesture);
+}
+
+bool S25ImageView::event(QEvent *event) {
+  if (event->type() == QEvent::Gesture) {
+    event->accept();
+    gestureEvent(dynamic_cast<QGestureEvent *>(event));
+  }
+
+  return QWidget::event(event);
+}
+
+void S25ImageView::gestureEvent(QGestureEvent *event) {
+  if (!event) {
+    return;
+  }
+
+  if (auto gesture =
+          reinterpret_cast<QPinchGesture *>(event->gesture(Qt::PinchGesture))) {
+    auto changeFlags = gesture->changeFlags();
+
+    if (changeFlags & QPinchGesture::ScaleFactorChanged) {
+      m_currentScale = gesture->totalScaleFactor();
+      qDebug() << "scale: " << m_currentScale * m_scale;
+    }
+
+    if (gesture->state() == Qt::GestureFinished) {
+      m_scale *= m_currentScale;
+      m_currentScale = 1.0;
+    }
+  }
+
+  if (auto gesture =
+          reinterpret_cast<QPanGesture *>(event->gesture(Qt::PanGesture))) {
+    qDebug() << "pan: " << gesture->delta();
+  }
+
+  // redraw
+  update();
+}
 
 int S25ImageView::getTotalLayers() const {
   if (m_archive) {
@@ -134,6 +177,9 @@ void S25ImageView::initializeGL() {
   f->glGenBuffers(1, &m_uvBuffer);
   f->glBindBuffer(GL_ARRAY_BUFFER, m_uvBuffer);
   f->glBufferData(GL_ARRAY_BUFFER, sizeof(uvBuffer), uvBuffer, GL_STATIC_DRAW);
+
+  m_viewport  = f->glGetUniformLocation(program, "viewport");
+  m_transform = f->glGetUniformLocation(program, "transform");
 }
 
 void S25ImageView::paintGL() {
@@ -156,7 +202,32 @@ void S25ImageView::paintGL() {
   auto  entries = archive.getTotalLayers();
 
   f->glUseProgram(m_program);
-  f->glUniform2f(0, m_viewportWidth, m_viewportHeight);
+  f->glUniform2f(m_viewport, m_viewportWidth, m_viewportHeight);
+
+  // create transform
+  auto const tr =
+      QTransform().scale(m_scale * m_currentScale, m_scale * m_currentScale);
+
+  GLfloat mat[16] = {
+      static_cast<float>(tr.m11()),
+      static_cast<float>(tr.m12()),
+      0,
+      static_cast<float>(tr.m13()), //
+      static_cast<float>(tr.m21()),
+      static_cast<float>(tr.m22()),
+      0,
+      static_cast<float>(tr.m23()), //
+      0,
+      0,
+      1,
+      0, //
+      static_cast<float>(tr.m31()),
+      static_cast<float>(tr.m32()),
+      0,
+      static_cast<float>(tr.m33()), //
+  };
+
+  f->glUniformMatrix4fv(m_transform, 1, GL_FALSE, mat);
 
   f->glEnable(GL_BLEND);
   f->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include <QGestureEvent>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
 #include <QUrl>
@@ -26,6 +27,10 @@ public:
   virtual void dropEvent(QDropEvent *theEvent) override;
   virtual void dragEnterEvent(QDragEnterEvent *event) override;
 
+  // handle touch events
+  virtual bool event(QEvent *event) override;
+  void         gestureEvent(QGestureEvent *event);
+
   // for S25LayerModel
   int  getTotalLayers() const;
   int  getPictLayerFor(unsigned long layer) const;
@@ -45,12 +50,16 @@ private:
   std::vector<GLuint> m_vertexBuffers;
 
   GLuint m_uvBuffer;
+  GLuint m_transform;
+  GLuint m_viewport;
 
   QOpenGLVertexArrayObject m_vao;
   GLuint                   m_program;
 
   int m_viewportWidth;
   int m_viewportHeight;
+
+  qreal m_currentScale, m_scale;
 
   bool loadArchive(QString const &path);
   void loadImagesToTexture();
