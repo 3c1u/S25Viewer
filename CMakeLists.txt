@@ -54,11 +54,13 @@ else()
   )
 endif()
 
-execute_process(COMMAND cd ${CMAKE_SOURCE_DIR}/s25decoder)
-execute_process(COMMAND cargo build --release)
-execute_process(COMMAND cd ${CMAKE_BINARY_DIR})
+execute_process(COMMAND cd ${CMAKE_SOURCE_DIR}/s25decoder && cargo build --release)
 
 target_link_directories(S25Viewer PRIVATE ${CMAKE_SOURCE_DIR}/s25decoder/target/release)
 
 target_link_libraries(S25Viewer PRIVATE Qt5::Widgets)
 target_link_libraries(S25Viewer PRIVATE s25decoder)
+
+if (UNIX AND NOT APPLE)
+  target_link_libraries(S25Viewer PRIVATE dl pthread)
+endif()
