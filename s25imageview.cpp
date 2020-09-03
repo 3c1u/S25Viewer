@@ -211,8 +211,8 @@ void S25ImageView::paintGL() {
   // create transform
   auto const tr = QTransform()
                       .scale(1.0 / m_viewportWidth, -1.0 / m_viewportHeight)
-                      .scale(m_scale * m_currentScale, m_scale * m_currentScale)
-                      .translate(m_offset.x(), m_offset.y());
+                      .translate(m_offset.x(), m_offset.y())
+                      .scale(m_scale * m_currentScale, m_scale * m_currentScale);
 
   GLfloat mat[16] = {
       static_cast<float>(tr.m11()),

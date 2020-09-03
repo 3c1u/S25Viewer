@@ -63,6 +63,7 @@ if(APPLE)
     MACOSX_BUNDLE_BUNDLE_NAME "S25 Viewer"
     MACOSX_BUNDLE_INFO_STRING "S25 Viewer"
     MACOSX_BUNDLE_GUI_IDENTIFIER "tokyo.vulpesgames.3c1u.s25viewer"
+    MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/Info-CMake.plist
   )
 endif()
 
