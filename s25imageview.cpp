@@ -82,7 +82,17 @@ void S25ImageView::gestureEvent(QGestureEvent *event) {
 }
 
 void S25ImageView::wheelEvent(QWheelEvent *event) {
-  m_offset += event->pixelDelta();
+  auto delta = event->pixelDelta();
+  auto constexpr steps = 5;
+
+  if (!delta.isNull()) {
+    m_offset += event->pixelDelta();
+  } else {
+    m_offset += event->angleDelta() / steps;
+  }
+  
+  event->accept();
+
   update();
 }
 
