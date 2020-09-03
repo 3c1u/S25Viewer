@@ -42,8 +42,8 @@ public:
     return *this;
   }
 
-  const uint8_t *getRGBABuffer(size_t *bufferSize) const {
-    return S25ImageGetRGBABufferView(m_inner, bufferSize);
+  const uint8_t *getBGRABuffer(size_t *bufferSize) const {
+    return S25ImageGetBGRABufferView(m_inner, bufferSize);
   }
 
   int getWidth() const { return m_width; }

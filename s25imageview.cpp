@@ -1,4 +1,4 @@
-#include <QDebug>
+// #include <QDebug>
 #include <QDrag>
 #include <QDropEvent>
 #include <QMimeData>
@@ -63,7 +63,7 @@ void S25ImageView::gestureEvent(QGestureEvent *event) {
 
     if (changeFlags & QPinchGesture::ScaleFactorChanged) {
       m_currentScale = gesture->totalScaleFactor();
-      qDebug() << "scale: " << m_currentScale * m_scale;
+      // qDebug() << "scale: " << m_currentScale * m_scale;
     }
 
     if (gesture->state() == Qt::GestureFinished) {
@@ -74,7 +74,7 @@ void S25ImageView::gestureEvent(QGestureEvent *event) {
 
   if (auto gesture =
           reinterpret_cast<QPanGesture *>(event->gesture(Qt::PanGesture))) {
-    qDebug() << "pan: " << gesture->delta();
+    // qDebug() << "pan: " << gesture->delta();
   }
 
   // redraw
@@ -144,7 +144,7 @@ void S25ImageView::initializeGL() {
 
   std::vector<char> errMessage(log_length);
   f->glGetShaderInfoLog(vShader, log_length, NULL, errMessage.data());
-  qDebug() << "vertex shader status: " << errMessage.data();
+  // qDebug() << "vertex shader status: " << errMessage.data();
 
   auto fShader = f->glCreateShader(GL_FRAGMENT_SHADER);
 
@@ -156,7 +156,7 @@ void S25ImageView::initializeGL() {
 
   errMessage.resize(log_length, 0);
   f->glGetShaderInfoLog(fShader, log_length, NULL, errMessage.data());
-  qDebug() << "frag shader status: " << errMessage.data();
+  // qDebug() << "frag shader status: " << errMessage.data();
 
   auto program = f->glCreateProgram();
   f->glAttachShader(program, vShader);
@@ -168,7 +168,7 @@ void S25ImageView::initializeGL() {
 
   errMessage.resize(log_length, 0);
   f->glGetProgramInfoLog(program, log_length, NULL, errMessage.data());
-  qDebug() << "link status: " << errMessage.data();
+  // qDebug() << "link status: " << errMessage.data();
 
   f->glDeleteShader(vShader);
   f->glDeleteShader(fShader);
@@ -200,7 +200,7 @@ void S25ImageView::paintGL() {
     return;
   }
 
-  qDebug() << "paintGL call";
+  // qDebug() << "paintGL call";
 
   auto &archive = *m_archive;
   auto  entries = archive.getTotalLayers();
@@ -249,7 +249,7 @@ void S25ImageView::paintGL() {
       continue;
     }
 
-    qDebug() << "paint entry: " << i;
+    // qDebug() << "paint entry: " << i;
 
     auto tex = m_textures[i];
     auto vtx = m_vertexBuffers[i];
@@ -275,7 +275,7 @@ void S25ImageView::dragEnterEvent(QDragEnterEvent *event) {
 }
 
 void S25ImageView::dropEvent(QDropEvent *theEvent) {
-  qDebug() << "s25 drop event";
+  // qDebug() << "s25 drop event";
 
   // load S25 image
   if (!theEvent->mimeData()->hasUrls()) {
@@ -305,12 +305,12 @@ bool S25ImageView::loadArchive(QString const &path) {
 
   if (!arc) {
     // archive load failed
-    qDebug() << "failed to load archive";
+    // qDebug() << "failed to load archive";
     return false;
   }
 
-  qDebug() << "image loaded: " << path << ", with " << arc.getTotalEntries()
-           << "entries";
+  // qDebug() << "image loaded: " << path << ", with " << arc.getTotalEntries()
+  //         << "entries";
 
   // select nothing
   m_imageEntries.resize(arc.getTotalLayers(), -1);
@@ -328,7 +328,7 @@ void S25ImageView::loadVertexBuffers() {
     return;
   }
 
-  qDebug() << "load vertex buffers";
+  // qDebug() << "load vertex buffers";
 
   auto &archive = *m_archive;
   auto  entries = archive.getTotalLayers();
@@ -425,12 +425,12 @@ void S25ImageView::loadImagesToTexture() {
     auto        tex = m_textures[i];
     const auto &img = *m_images[i];
 
-    qDebug() << "load entry " << i << "; (w, h) = " << img.getWidth() << ", "
-             << img.getHeight();
+    // qDebug() << "load entry " << i << "; (w, h) = " << img.getWidth() << ", "
+    //         << img.getHeight();
 
     f->glBindTexture(GL_TEXTURE_2D, tex);
     f->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.getWidth(), img.getHeight(),
-                    0, GL_RGBA, GL_UNSIGNED_BYTE, img.getRGBABuffer(nullptr));
+                    0, GL_BGRA, GL_UNSIGNED_BYTE, img.getBGRABuffer(nullptr));
 
     f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     f->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

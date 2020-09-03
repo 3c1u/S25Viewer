@@ -81,15 +81,15 @@ pub unsafe extern "C" fn S25ImageGetOffset(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn S25ImageGetRGBABufferView(
+pub unsafe extern "C" fn S25ImageGetBGRABufferView(
     image: *const S25Image,
     size: *mut usize,
 ) -> *const u8 {
     let image = &*image;
 
     if !size.is_null() {
-        *size = image.rgba_buffer().len();
+        *size = image.bgra_buffer.len();
     }
     
-    image.rgba_buffer().as_ptr()
+    image.bgra_buffer.as_ptr()
 }
