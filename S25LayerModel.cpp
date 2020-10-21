@@ -53,7 +53,7 @@ bool S25LayerModel::setData(const QModelIndex &index, const QVariant &value,
     break;
   case kS25LayerModelPictLayerNumber:
     m_view->setPictLayer(index.row(), val);
-    emit dataChanged(index, index, QVector{role});
+    emit dataChanged(index, index, QVector<int>{role});
     return true;
     break;
   /* case kS25LayerModelVisibilityFlag:

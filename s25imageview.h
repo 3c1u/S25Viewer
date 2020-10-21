@@ -6,10 +6,16 @@
 #include <vector>
 
 #include <QGestureEvent>
-#include <QOpenGLVertexArrayObject>
-#include <QOpenGLWidget>
 #include <QUrl>
 #include <QWidget>
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+#include <QOpenGLVertexArrayObject>
+#include <QOpenGLWidget>
+#else
+#include <QtOpenGL/QOpenGLVertexArrayObject>
+#include <QtOpenGLWidgets/QOpenGLWidget>
+#endif
 
 #include "S25DecoderWrapper.h"
 

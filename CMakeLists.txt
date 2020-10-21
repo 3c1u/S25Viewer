@@ -24,7 +24,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #    endif()
 #endif()
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets)
+find_package(Qt6 COMPONENTS Widgets opengl openglwidgets)
 
 if(ANDROID)
   add_library(S25Viewer SHARED
@@ -69,14 +70,22 @@ endif()
 
 add_custom_target(
     s25decoder-build
-    COMMAND cargo build --release
+    # COMMAND cargo build --release
 )
 
 target_link_directories(S25Viewer PRIVATE ${CMAKE_SOURCE_DIR}/target/release)
 
 add_dependencies(S25Viewer s25decoder-build)
 
-target_link_libraries(S25Viewer PRIVATE Qt5::Widgets)
+
+if (Qt5_FOUND)
+  target_link_libraries(S25Viewer PRIVATE Qt5::Widgets)
+elseif(Qt6_FOUND)
+  target_link_libraries(S25Viewer PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets)
+else()
+  message(FATAL_ERROR "Qt 5/6 not found")
+endif()
+
 target_link_libraries(S25Viewer PRIVATE s25decoder)
 
 if (UNIX AND NOT APPLE)
