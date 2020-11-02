@@ -49,6 +49,7 @@ jobs:
       shell: bash
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: |
+        cargo build --release
         cmake --build . --config $BUILD_TYPE
         mkdir S25Viewer_win32
         cp ./S25Viewer.exe ./S25Viewer_win32
