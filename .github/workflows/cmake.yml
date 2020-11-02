@@ -49,4 +49,4 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: S25Viewer_win32
-        path: ${{runner.workspace}}/build/S25Viewer_win32/
+        path: build/S25Viewer_win32/
