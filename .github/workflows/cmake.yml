@@ -42,7 +42,7 @@ jobs:
         cargo build --release
         cmake --build . --config $BUILD_TYPE
         mkdir S25Viewer_win32
-        cp ./S25Viewer.exe ./S25Viewer_win32
+        cp ./Release/S25Viewer.exe ./S25Viewer_win32
         cd S25Viewer_win32
         windeployqt --qmldir ../../ S25Viewer.exe
         cd ../../
