@@ -91,3 +91,18 @@ target_link_libraries(S25Viewer PRIVATE s25decoder)
 if (UNIX AND NOT APPLE)
   target_link_libraries(S25Viewer PRIVATE dl pthread)
 endif()
+
+if (WIN32)
+  target_link_libraries(
+      S25Viewer
+      PRIVATE
+      WS2_32.lib
+      User32.lib
+      advapi32.lib
+      userenv.lib
+      ole32.lib
+      winmm.lib
+      dwmapi.lib
+      uxtheme.lib
+  )
+endif()
